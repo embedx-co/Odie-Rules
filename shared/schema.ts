@@ -22,6 +22,7 @@ export const players = pgTable("players", {
   funding: integer("funding").default(0),
   isHost: boolean("is_host").default(false),
   isJudge: boolean("is_judge").default(false),
+  isInvestor: boolean("is_investor").default(false),
   ventureCards: jsonb("venture_cards").default([]),
   joinedAt: timestamp("joined_at").defaultNow(),
 });
@@ -44,11 +45,13 @@ export const rounds = pgTable("rounds", {
   id: serial("id").primaryKey(),
   roomId: integer("room_id").notNull(),
   roundNo: integer("round_no").notNull(),
-  promptDeals: jsonb("prompt_deals").default([]),
+  investorId: text("investor_id").notNull(),
+  promptCard: jsonb("prompt_card").notNull(), // Single prompt for the round
   venturePlays: jsonb("venture_plays").default([]),
   pitches: jsonb("pitches").default([]),
   votes: jsonb("votes").default([]),
-  winnerId: text("winner_id"),
+  investorChoice: text("investor_choice"), // Player ID chosen by investor
+  winnerId: text("winner_id"), // Player who got the investment
   completedAt: timestamp("completed_at"),
 });
 
@@ -170,11 +173,13 @@ export const gameSettingsSchema = z.object({
   maxPlayers: z.number().min(3).max(12).default(10),
   pitchTimerSec: z.number().min(30).max(180).default(120),
   presentationTimerSec: z.number().min(30).max(120).default(60),
+  investmentAmountBillion: z.number().min(0.1).max(5).default(1), // Investment amount in billions
   fundingTargetBillion: z.number().min(1).default(5),
   maxRounds: z.number().optional(),
   ventureCardsPerPlayer: z.number().min(1).max(5).default(2),
   allowAudienceObservers: z.boolean().default(true),
-  votingMode: z.enum(["peer", "judge", "hybrid"]).default("peer"),
+  investorSelectionTimerSec: z.number().min(15).max(60).default(30),
+  votingTimerSec: z.number().min(15).max(60).default(30),
 });
 
 export type GameSettings = z.infer<typeof gameSettingsSchema>;

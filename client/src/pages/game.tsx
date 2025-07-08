@@ -8,6 +8,7 @@ import MainGameArea from "@/components/game/main-game-area";
 import PlayerHand from "@/components/game/player-hand";
 import VotingModal from "@/components/game/voting-modal";
 import RoundResultsModal from "@/components/game/round-results-modal";
+import InvestorSelectionModal from "@/components/game/investor-selection-modal";
 
 export default function Game() {
   const [, setLocation] = useLocation();
@@ -17,9 +18,11 @@ export default function Game() {
   const [gameState, setGameState] = useState<any>(null);
   const [showVotingModal, setShowVotingModal] = useState(false);
   const [showResultsModal, setShowResultsModal] = useState(false);
+  const [showInvestorModal, setShowInvestorModal] = useState(false);
   const [currentPhase, setCurrentPhase] = useState("lobby");
   const [roundResults, setRoundResults] = useState<any>(null);
-  const [isHost, setIsHost] = useState(false); // Add isHost state
+  const [isHost, setIsHost] = useState(false);
+  const [investmentAmount, setInvestmentAmount] = useState(1000000000);
 
   // Get room PIN from URL
   useEffect(() => {
@@ -89,9 +92,20 @@ export default function Game() {
         case "PLAYER_TURN":
           setCurrentPhase("pitching");
           break;
+        case "INVESTOR_SELECTION_START":
+          setCurrentPhase("investor-selection");
+          setShowInvestorModal(true);
+          break;
         case "VOTING_PHASE_START":
           setCurrentPhase("voting");
           setShowVotingModal(true);
+          break;
+        case "INVESTMENT_DECISION":
+          setShowInvestorModal(false);
+          toast({
+            title: "Investment Decision",
+            description: `Investment of ${lastMessage.investmentAmount / 1000000000}B awarded!`,
+          });
           break;
         case "ROUND_END":
           setCurrentPhase("results");
@@ -147,6 +161,14 @@ export default function Game() {
       candidateId,
     });
     setShowVotingModal(false);
+  };
+
+  const handleSelectInvestment = (chosenPlayerId: string) => {
+    sendMessage({
+      type: "SELECT_INVESTMENT",
+      chosenPlayerId,
+    });
+    setShowInvestorModal(false);
   };
 
   const handleCloseResultsModal = () => {
@@ -210,6 +232,15 @@ export default function Game() {
         players={gameState.players}
         currentPlayerId={playerId}
         onVote={handleCastVote}
+      />
+
+      <InvestorSelectionModal
+        isOpen={showInvestorModal}
+        onClose={() => setShowInvestorModal(false)}
+        players={gameState.players}
+        currentPlayerId={playerId}
+        investmentAmount={investmentAmount}
+        onSelectInvestment={handleSelectInvestment}
       />
 
       <RoundResultsModal

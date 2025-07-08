@@ -66,8 +66,12 @@ export class GameLogic {
 
       await storage.updatePlayer(player.playerId, {
         ventureCards: playerCards,
+        isInvestor: false, // Reset investor status
       });
     }
+
+    // Assign first investor (host starts as investor)
+    await storage.updatePlayer(hostId, { isInvestor: true });
 
     // Update room state
     await storage.updateGameRoom(roomId, {
@@ -88,17 +92,19 @@ export class GameLogic {
     const players = await storage.getPlayersByRoom(roomId);
     const promptCards = await storage.getAllPromptCards();
     
-    // Deal prompt cards to players
+    // Find current investor
+    const investor = players.find(p => p.isInvestor);
+    if (!investor) throw new Error("No investor found for round");
+    
+    // Get a single prompt card for the round
     const shuffledPrompts = this.shuffleArray([...promptCards]);
-    const promptDeals = players.map((player, index) => ({
-      playerId: player.playerId,
-      promptCard: shuffledPrompts[index % shuffledPrompts.length],
-    }));
+    const promptCard = shuffledPrompts[0];
 
     const round = await storage.createRound({
       roomId,
       roundNo,
-      promptDeals,
+      investorId: investor.playerId,
+      promptCard,
       venturePlays: [],
       pitches: [],
       votes: [],
@@ -108,13 +114,16 @@ export class GameLogic {
     broadcastToRoom(roomId, {
       type: "ROUND_START",
       round: roundNo,
-      prompts: promptDeals,
+      promptCard,
+      investorId: investor.playerId,
     });
 
     // Start planning phase timer
+    const room = await storage.getGameRoom(roomId);
+    const settings = room?.settings as any;
     setTimeout(() => {
       this.startPitchingPhase(roomId, round.id);
-    }, 5000); // 5 second planning phase for demo
+    }, settings.pitchTimerSec * 1000);
   }
 
   async startPitchingPhase(roomId: number, roundId: number) {
@@ -124,65 +133,98 @@ export class GameLogic {
     });
 
     const players = await storage.getPlayersByRoom(roomId);
+    const pitchers = players.filter(p => !p.isInvestor); // Only non-investors pitch
+    const room = await storage.getGameRoom(roomId);
+    const settings = room?.settings as any;
+    
     let currentPlayerIndex = 0;
 
     const pitchNextPlayer = () => {
-      if (currentPlayerIndex >= players.length) {
-        this.startVotingPhase(roomId, roundId);
+      if (currentPlayerIndex >= pitchers.length) {
+        this.startInvestorSelectionPhase(roomId, roundId);
         return;
       }
 
-      const currentPlayer = players[currentPlayerIndex];
+      const currentPlayer = pitchers[currentPlayerIndex];
       broadcastToRoom(roomId, {
         type: "PLAYER_TURN",
         playerId: currentPlayer.playerId,
-        timeLimit: 60, // 60 seconds for demo
+        timeLimit: settings.presentationTimerSec,
       });
 
       currentPlayerIndex++;
-      setTimeout(pitchNextPlayer, 65000); // 65 seconds to allow for transition
+      setTimeout(pitchNextPlayer, (settings.presentationTimerSec + 5) * 1000); // Add 5 seconds buffer
     };
 
     pitchNextPlayer();
   }
 
-  async startVotingPhase(roomId: number, roundId: number) {
+  async startInvestorSelectionPhase(roomId: number, roundId: number) {
+    const room = await storage.getGameRoom(roomId);
+    const settings = room?.settings as any;
+    
     broadcastToRoom(roomId, {
-      type: "VOTING_PHASE_START",
+      type: "INVESTOR_SELECTION_START",
       roundId,
-      timeLimit: 30, // 30 seconds for voting
+      timeLimit: settings.investorSelectionTimerSec,
     });
 
     setTimeout(() => {
       this.endRound(roomId, roundId);
-    }, 30000);
+    }, settings.investorSelectionTimerSec * 1000);
+  }
+
+  async startVotingPhase(roomId: number, roundId: number) {
+    const room = await storage.getGameRoom(roomId);
+    const settings = room?.settings as any;
+    
+    broadcastToRoom(roomId, {
+      type: "VOTING_PHASE_START",
+      roundId,
+      timeLimit: settings.votingTimerSec,
+    });
+
+    setTimeout(() => {
+      this.endRound(roomId, roundId);
+    }, settings.votingTimerSec * 1000);
   }
 
   async endRound(roomId: number, roundId: number) {
-    const votes = await storage.getVotesByRound(roundId);
+    const round = await storage.getRound(roundId);
     const players = await storage.getPlayersByRoom(roomId);
+    const room = await storage.getGameRoom(roomId);
+    const settings = room?.settings as any;
 
-    // Count votes
-    const voteCount = new Map<string, number>();
-    votes.forEach(vote => {
-      voteCount.set(vote.candidateId, (voteCount.get(vote.candidateId) || 0) + 1);
-    });
+    if (!round) return;
 
-    // Find winner
+    // Check if there's an investor choice (new flow) or use voting (legacy flow)
     let winner = "";
-    let maxVotes = 0;
-    for (const [candidateId, count] of voteCount) {
-      if (count > maxVotes) {
-        maxVotes = count;
-        winner = candidateId;
+    if (round.investorChoice) {
+      winner = round.investorChoice;
+    } else {
+      // Fall back to voting system if no investor choice
+      const votes = await storage.getVotesByRound(roundId);
+      const voteCount = new Map<string, number>();
+      votes.forEach(vote => {
+        voteCount.set(vote.candidateId, (voteCount.get(vote.candidateId) || 0) + 1);
+      });
+
+      let maxVotes = 0;
+      for (const [candidateId, count] of voteCount) {
+        if (count > maxVotes) {
+          maxVotes = count;
+          winner = candidateId;
+        }
       }
     }
 
-    // Award funding
-    if (winner) {
+    const investmentAmount = settings.investmentAmountBillion * 1000000000;
+
+    // Award funding only if winner hasn't been awarded yet
+    if (winner && !round.winnerId) {
       const winnerPlayer = players.find(p => p.playerId === winner);
       if (winnerPlayer) {
-        const newFunding = winnerPlayer.funding + 1000000000; // +$1B
+        const newFunding = winnerPlayer.funding + investmentAmount;
         await storage.updatePlayer(winner, { funding: newFunding });
       }
     }
@@ -204,16 +246,27 @@ export class GameLogic {
     });
 
     // Check game end conditions
-    const room = await storage.getGameRoom(roomId);
-    const settings = room?.settings as any;
     const updatedPlayers = await storage.getPlayersByRoom(roomId);
-    
-    const hasWinner = updatedPlayers.some(p => p.funding >= (settings.fundingTargetBillion * 1000000000));
+    const targetFunding = settings.fundingTargetBillion * 1000000000;
+    const hasWinner = updatedPlayers.some(p => p.funding >= targetFunding);
     const maxRoundsReached = settings.maxRounds && room?.currentRound >= settings.maxRounds;
 
     if (hasWinner || maxRoundsReached) {
       await this.endGame(roomId);
     } else {
+      // Rotate investor to next player
+      const currentInvestor = players.find(p => p.isInvestor);
+      const currentIndex = players.findIndex(p => p.playerId === currentInvestor?.playerId);
+      const nextIndex = (currentIndex + 1) % players.length;
+      
+      // Reset all players to non-investor
+      for (const player of players) {
+        await storage.updatePlayer(player.playerId, { isInvestor: false });
+      }
+      
+      // Set next investor
+      await storage.updatePlayer(players[nextIndex].playerId, { isInvestor: true });
+
       // Start next round
       const nextRound = (room?.currentRound || 0) + 1;
       await storage.updateGameRoom(roomId, { currentRound: nextRound });
@@ -299,6 +352,45 @@ export class GameLogic {
       playerId,
       roundId: currentRound.id,
       content,
+    });
+  }
+
+  async selectInvestment(roomId: number, investorId: string, chosenPlayerId: string) {
+    const room = await storage.getGameRoom(roomId);
+    if (!room) throw new Error("Room not found");
+
+    const rounds = await storage.getRoundsByRoom(roomId);
+    const currentRound = rounds.find(r => r.roundNo === room.currentRound);
+    
+    if (!currentRound) throw new Error("No active round");
+
+    // Verify the investor is making the choice
+    if (currentRound.investorId !== investorId) {
+      throw new Error("Only the investor can make this choice");
+    }
+
+    // Update the round with the investor's choice
+    await storage.updateRound(currentRound.id, {
+      investorChoice: chosenPlayerId,
+    });
+
+    // Award the investment
+    const settings = room.settings as any;
+    const investmentAmount = settings.investmentAmountBillion * 1000000000;
+    
+    const chosenPlayer = await storage.getPlayer(chosenPlayerId);
+    if (chosenPlayer) {
+      await storage.updatePlayer(chosenPlayerId, {
+        funding: chosenPlayer.funding + investmentAmount,
+      });
+    }
+
+    // Broadcast the investment decision
+    broadcastToRoom(roomId, {
+      type: "INVESTMENT_DECISION",
+      investorId,
+      chosenPlayerId,
+      investmentAmount,
     });
   }
 

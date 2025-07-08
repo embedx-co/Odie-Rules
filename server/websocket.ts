@@ -57,6 +57,9 @@ async function handleMessage(clientId: string, message: any) {
     case "CAST_VOTE":
       await handleCastVote(clientId, message);
       break;
+    case "SELECT_INVESTMENT":
+      await handleSelectInvestment(clientId, message);
+      break;
     case "START_GAME":
       await handleStartGame(clientId, message);
       break;
@@ -155,6 +158,29 @@ async function handleSubmitPitch(clientId: string, message: any) {
     client.ws.send(JSON.stringify({ 
       type: "ERROR", 
       message: error instanceof Error ? error.message : "Failed to submit pitch" 
+    }));
+  }
+}
+
+async function handleSelectInvestment(clientId: string, message: any) {
+  const client = clients.get(clientId);
+  if (!client || !client.roomId || !client.playerId) return;
+
+  const { chosenPlayerId } = message;
+  
+  try {
+    await gameLogic.selectInvestment(client.roomId, client.playerId, chosenPlayerId);
+    
+    // Broadcast updated game state
+    const gameState = await gameLogic.getGameState(client.roomId);
+    broadcastToRoom(client.roomId, {
+      type: "GAME_STATE_UPDATE",
+      gameState,
+    });
+  } catch (error) {
+    client.ws.send(JSON.stringify({ 
+      type: "ERROR", 
+      message: error instanceof Error ? error.message : "Failed to select investment" 
     }));
   }
 }

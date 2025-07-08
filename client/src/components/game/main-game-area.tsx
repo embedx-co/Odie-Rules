@@ -47,6 +47,13 @@ export default function MainGameArea({
           icon: <Mic className="w-6 h-6" />,
           color: "bg-red-500",
         };
+      case "investor-selection":
+        return {
+          title: "Investment Decision",
+          description: "The investor is choosing which startup to fund",
+          icon: <CheckCircle className="w-6 h-6" />,
+          color: "bg-green-500",
+        };
       case "voting":
         return {
           title: "Voting Phase",

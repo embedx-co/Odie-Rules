@@ -1,0 +1,54 @@
+all earlier technical specs remain valid unless superseded here.
+
+1 · Roles per Round
+Role	How Assigned	Abilities
+Investor	Rotates clockwise each round (host may override).	- Does not pitch.
+
+Secretly selects one pitch to invest in after all presentations.
+
+Cannot vote. |
+| Pitchers | All non-investor players. | - Receive the prompt, play Venture cards, pitch, and vote. |
+| Observers | Optional audience. | - May vote if allow_audience_observers=true; never eligible for investment. |
+
+2 · Round Flow (replaces §5 in prior spec)
+#	Phase	Key Actions	Timer
+1	Prompt Reveal	Single Prompt card shown to everyone.	—
+2	Planning	Pitchers prepare; Venture “pre-pitch” cards playable.	pitch_timer_sec
+3	Pitching	Each pitcher presents. Venture “mid-pitch” cards playable. Investor listens.	presentation_timer_sec per player
+4	Investor Selection	Investor secretly taps the pitch they back. Selection hidden until Phase 6.	30 s (configurable)
+5	Peer Voting	All Pitchers + allowed Observers vote for one pitch (no self-vote). Investor does not vote.	30 s (configurable)
+6	Reveal & Funding	UI reveals:	
+ a. Investor’s chosen pitch			
+ b. Vote counts per pitch	—		
+7	Funding Calculation	Let I be the Investor, P the pitcher invested in, V_total the number of valid votes, V_match votes that went to P.	
+ • Pitcher P gains the fixed Investment Amount (default $1 B; configurable).			
+ • Investor I gains Profit = Investment Amount × (V_match / V_total).			
+  Example: 20% of players voted for P ⇒ Investor gains $0.2 B.			
+ • If V_total = 0 ⇒ Investor gains $0.	—		
+8	Apply Venture Effects	Resolve Venture cards marked “post-pitch”.	—
+9	Round End	Update leader-board; rotate Investor; check win conditions.	—
+
+3 · Scoring / Win Condition Changes
+Pitcher earnings now come only from Investor Investment plus Venture modifiers.
+
+Investor earnings accumulate like any player’s funding and count toward the global win target.
+
+First participant (pitcher or investor) to reach funding_target_billion wins, or highest funding after max_rounds.
+
+4 · UI / UX Adjustments
+Investor Badge: visually highlight the current Investor in lobby & in-round headers.
+
+Secret Pick Modal: Investor sees list of pitcher avatars/titles; submission is hidden until Phase 6.
+
+Voting Panel must exclude Investor automatically.
+
+Funding Reveal Animation: show Pitcher gain, then Investor profit with percentage overlay.
+
+Leaderboard should label Investor gains distinctly (e.g., green “Investor Profit”).
+
+5 · Edge-Case Rules
+Scenario	Resolution
+Investor selects themselves (illegal)	Block UI; investor must choose another player.
+Tie in votes for V_match?	Still counts; V_match is total votes on the invested pitch, regardless of tie elsewhere.
+V_total = 0 (nobody voted)	Pitcher still gets full investment; Investor gains $0.
+All non-investor players abstain or disconnect	Auto-skip round or re-deal, at host’s discretion.

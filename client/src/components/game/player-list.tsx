@@ -7,6 +7,7 @@ interface Player {
   name: string;
   isHost: boolean;
   isJudge: boolean;
+  isInvestor: boolean;
   funding: number;
 }
 
@@ -51,6 +52,7 @@ export default function PlayerList({ players, currentPlayerId }: PlayerListProps
                   <div className="flex items-center space-x-1 text-sm text-gray-500">
                     {player.isHost && <Badge variant="secondary" className="text-xs">Host</Badge>}
                     {player.isJudge && <Badge variant="secondary" className="text-xs">Judge</Badge>}
+                    {player.isInvestor && <Badge variant="outline" className="text-xs border-green-300 text-green-700 bg-green-50">Investor</Badge>}
                   </div>
                 </div>
               </div>

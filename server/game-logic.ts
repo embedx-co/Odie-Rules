@@ -75,6 +75,11 @@ export class GameLogic {
       currentRound: 1,
     });
 
+    // Broadcast game started
+    broadcastToRoom(roomId, {
+      type: "GAME_STARTED",
+    });
+
     // Start first round
     await this.startRound(roomId, 1);
   }

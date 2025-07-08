@@ -95,11 +95,19 @@ export default function Lobby() {
 
     setIsStarting(true);
     try {
-      await apiRequest("POST", `/api/rooms/${roomPin}/start`, {
-        hostId: playerId,
-      });
-      
-      // The WebSocket will handle the redirect
+      // Send WebSocket message to start game
+      if (isConnected) {
+        sendMessage({
+          type: "START_GAME",
+          playerId,
+          roomPin,
+        });
+      } else {
+        // Fallback to API call if WebSocket not connected
+        await apiRequest("POST", `/api/rooms/${roomPin}/start`, {
+          hostId: playerId,
+        });
+      }
     } catch (error) {
       toast({
         title: "Error",

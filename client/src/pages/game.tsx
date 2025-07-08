@@ -19,6 +19,7 @@ export default function Game() {
   const [showResultsModal, setShowResultsModal] = useState(false);
   const [currentPhase, setCurrentPhase] = useState("lobby");
   const [roundResults, setRoundResults] = useState<any>(null);
+  const [isHost, setIsHost] = useState(false); // Add isHost state
 
   // Get room PIN from URL
   useEffect(() => {
@@ -30,10 +31,26 @@ export default function Game() {
 
     // Get player info from localStorage
     const storedPlayerId = localStorage.getItem("playerId");
+    const storedIsHost = localStorage.getItem("isHost") === "true";
+    const storedRoomPin = localStorage.getItem("roomPin");
+
     if (storedPlayerId) {
       setPlayerId(storedPlayerId);
+      setIsHost(storedIsHost);
+
+      // If the stored room PIN doesn't match current PIN, clear localStorage
+      if (storedRoomPin !== pin) {
+        localStorage.removeItem("playerId");
+        localStorage.removeItem("playerName");
+        localStorage.removeItem("isHost");
+        localStorage.removeItem("roomPin");
+        setLocation("/");
+      }
+    } else if (pin) {
+      // No player data but trying to access game - redirect to home
+      setLocation("/");
     }
-  }, []);
+  }, [setLocation]);
 
   // WebSocket connection
   const { isConnected, lastMessage, sendMessage } = useWebSocket(roomPin ? `/ws` : null);

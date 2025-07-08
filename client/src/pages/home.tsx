@@ -48,6 +48,7 @@ export default function Home() {
       localStorage.setItem("playerId", data.player.id);
       localStorage.setItem("playerName", data.player.name);
       localStorage.setItem("isHost", "true");
+      localStorage.setItem("roomPin", data.room.pin);
 
       setLocation(`/lobby/${data.room.pin}`);
     } catch (error) {
@@ -82,6 +83,44 @@ export default function Home() {
 
     setIsJoining(true);
     try {
+      // Check if we have existing player data for this room
+      const existingPlayerId = localStorage.getItem("playerId");
+      const existingRoomPin = localStorage.getItem("roomPin");
+      
+      if (existingPlayerId && existingRoomPin === roomPin.trim()) {
+        // Try to rejoin first
+        try {
+          const rejoinResponse = await apiRequest("POST", `/api/rooms/${roomPin.trim()}/rejoin`, {
+            playerId: existingPlayerId,
+          });
+          
+          const rejoinData = await rejoinResponse.json();
+          
+          // Update localStorage with current data
+          localStorage.setItem("playerId", rejoinData.player.id);
+          localStorage.setItem("playerName", rejoinData.player.name);
+          localStorage.setItem("isHost", rejoinData.player.isHost.toString());
+          localStorage.setItem("roomPin", roomPin.trim());
+          
+          // Redirect to appropriate page based on game state
+          if (rejoinData.room.state === "lobby") {
+            setLocation(`/lobby/${roomPin.trim()}`);
+          } else {
+            setLocation(`/game/${roomPin.trim()}`);
+          }
+          
+          toast({
+            title: "Rejoined!",
+            description: "Successfully rejoined the game.",
+          });
+          return;
+        } catch (rejoinError) {
+          console.log("Rejoin failed, trying regular join:", rejoinError);
+          // If rejoin fails, continue with regular join
+        }
+      }
+
+      // Regular join for new players
       const response = await apiRequest("POST", `/api/rooms/${roomPin.trim()}/join`, {
         playerName: playerName.trim(),
       });
@@ -92,6 +131,7 @@ export default function Home() {
       localStorage.setItem("playerId", data.player.id);
       localStorage.setItem("playerName", data.player.name);
       localStorage.setItem("isHost", "false");
+      localStorage.setItem("roomPin", roomPin.trim());
 
       setLocation(`/lobby/${roomPin.trim()}`);
     } catch (error) {

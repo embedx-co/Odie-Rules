@@ -123,6 +123,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Rejoin game room
+  app.post("/api/rooms/:pin/rejoin", async (req, res) => {
+    try {
+      const { pin } = req.params;
+      const { playerId } = req.body;
+
+      if (!playerId) {
+        return res.status(400).json({ error: "Player ID is required" });
+      }
+
+      const room = await storage.getGameRoomByPin(pin);
+      if (!room) {
+        return res.status(404).json({ error: "Room not found" });
+      }
+
+      const player = await storage.getPlayer(playerId);
+      if (!player || player.roomId !== room.id) {
+        return res.status(404).json({ error: "Player not found in this room" });
+      }
+
+      res.json({
+        room: {
+          id: room.id,
+          pin: room.roomPin,
+          hostId: room.hostId,
+          state: room.state,
+          settings: room.settings,
+          currentRound: room.currentRound,
+        },
+        player: {
+          id: player.playerId,
+          name: player.name,
+          isHost: player.isHost,
+          funding: player.funding,
+        },
+      });
+    } catch (error) {
+      console.error("Error rejoining room:", error);
+      res.status(500).json({ error: "Failed to rejoin room" });
+    }
+  });
+
   // Get room details
   app.get("/api/rooms/:pin", async (req, res) => {
     try {

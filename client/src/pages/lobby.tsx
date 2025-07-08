@@ -33,12 +33,25 @@ export default function Lobby() {
     // Get player info from localStorage
     const storedPlayerId = localStorage.getItem("playerId");
     const storedIsHost = localStorage.getItem("isHost") === "true";
+    const storedRoomPin = localStorage.getItem("roomPin");
     
     if (storedPlayerId) {
       setPlayerId(storedPlayerId);
       setIsHost(storedIsHost);
+      
+      // If the stored room PIN doesn't match current PIN, clear localStorage
+      if (storedRoomPin !== pin) {
+        localStorage.removeItem("playerId");
+        localStorage.removeItem("playerName");
+        localStorage.removeItem("isHost");
+        localStorage.removeItem("roomPin");
+        setLocation("/");
+      }
+    } else if (pin) {
+      // No player data but trying to access lobby - redirect to home
+      setLocation("/");
     }
-  }, []);
+  }, [setLocation]);
 
   // Fetch room data
   const { data: roomData, isLoading, error } = useQuery({

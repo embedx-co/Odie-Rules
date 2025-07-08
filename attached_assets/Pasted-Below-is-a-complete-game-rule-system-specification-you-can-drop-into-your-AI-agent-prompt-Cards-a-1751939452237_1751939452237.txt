@@ -1,0 +1,137 @@
+Below is a complete game-rule & system specification you can drop into your AI-agent prompt.
+Cards are not included (you will pass the 100 Prompt cards & 50 Venture cards separately).
+
+1 · Concept Summary
+Working Title: Launch Pitch (rename as desired).
+
+Core Loop: Each player receives one Prompt (a product or problem). They have a timed window to craft and deliver a pitch.
+
+Competition: Peers (and/or a Judge) vote; Venture cards add strategic twists that can change funding outcomes.
+
+Victory: First player to reach a configurable funding target (default $5 B) or highest funding after N rounds.
+
+2 · Entities & Data Model
+Entity	Key Fields / Relationships
+GameRoom	room_id, host_id, state (lobby | in_round | finished), settings
+Player	player_id, name, avatar, funding, is_host, is_judge
+PromptCard	card_id, text
+VentureCard	card_id, title, text, play_window (pre, mid, post)
+Round	round_no, prompt_deals[], venture_plays[], pitches[], votes[]
+Pitch	player_id, content, timestamp
+Vote	voter_id, candidate_id
+
+(Use Postgres tables or a NoSQL doc model; all fields serializable to JSON for WebSocket traffic.)
+
+3 · Configurable Game Settings (per room)
+Setting	Default	Allowed Range / Notes
+max_players	10	3 – 12 recommended
+pitch_timer_sec	120	30 – 180
+presentation_timer_sec	60	30 – 120
+funding_target_billion	5	Integer; disables if max_rounds is set
+max_rounds	null	Integer; optional override to force fixed-length games
+venture_cards_per_player	2	Dealt at game start; hand size is max (draw up to)
+allow_audience_observers	true	Non-players can view & vote (non-binding)
+voting_mode	"peer"	"peer" (majority) | "judge" | "hybrid"
+
+4 · Game Setup Workflow
+sql
+Copy
+Edit
+1. Host creates GameRoom → receives room_id
+2. Players join with room_id → lobby list updates in real-time
+3. Host configures settings (see §3)
+4. System shuffles Prompt & Venture decks
+5. Deal Venture cards:
+   each player draws N = venture_cards_per_player (face-down hand)
+6. Funding initialized: 0 for all players
+7. Host presses "Start Game" → Round 1 begins
+5 · Round Lifecycle
+Phase	Duration	Server Actions	Client UI
+5.1 Draw	~2 s	Deal 1 Prompt card to each player (face-up).	Card flip animation
+5.2 Planning	pitch_timer_sec	Countdown broadcast; players may play “pre” Venture cards.	Timer, editable notes
+5.3 Pitching	each player presentation_timer_sec	Active speaker flag; mid-pitch Venture cards can trigger.	Large stage view
+5.4 Voting	30 – 60 s	Collect votes; prevent self-vote.	Vote panel
+5.5 Funding & Effects	<1 s	- Round winner: +$1 B	
+
+Apply pending Venture modifiers (add / steal / multiply)
+
+Persist totals | Leaderboard pop-up |
+| 5.6 Check End | — | If any player funding ≥ funding_target OR round_no == max_rounds, state → finished else next round. | Next-round splash |
+
+6 · Venture Card Mechanics
+Play Window	Examples	UX Trigger
+Pre-Pitch	START-UP, BOOTSTRAP, PIVOT	Button on hand during Planning
+Mid-Pitch	BLACKOUT, SPEED ROUND, HACKATHON	Small overlay for audience & host confirmation
+Post-Pitch	ACQUISITION, SERIES A, VIRAL	Select card before Voting closes
+
+One Venture card per player per round, unless card text overrides.
+
+Spent cards move to a discard pile (persist for audit).
+
+Card text resolves in order of play timestamp (server authoritative).
+
+Conflicting effects: follow this priority → Lose Funding › Steal › Gain › Multiply.
+
+7 · Scoring & Tie-Breaking
+Round Winner: most votes (judge breaks ties).
+
+Funding: default +$1 B, modified by Venture effects.
+
+Game Winner: highest funding when end condition met.
+
+Exact Tie at Game End: sudden-death pitch with a new prompt; no Venture cards.
+
+8 · Client-Side Screens / Routes
+Path	Purpose
+/	Landing → “Create Room” / “Join Room”
+/room/:id	Lobby & Settings
+/play/:id	Main game board (round lifecycle)
+/results/:id	Final standings + “Play Again”
+
+All views responsive; use WebSockets (Socket.io or Ably) for low-latency state sync.
+
+9 · Real-Time Event Contract (WebSocket)
+jsonc
+Copy
+Edit
+// Outbound from server
+{
+  "type": "ROUND_START",
+  "round": 3,
+  "prompts": [{ "player_id": "u1", "text": "Remote worker isolation" }]
+}
+{
+  "type": "VENTURE_PLAYED",
+  "player_id": "u2",
+  "card_id": "v43",
+  "title": "PIVOT"
+}
+{
+  "type": "VOTE_RESULT",
+  "winner_id": "u3",
+  "funding_change": 1000000000
+}
+(Define complementary client → server messages for ready, vote, play_card, etc.)
+
+10 · Security & Moderation
+Room PIN (6 digits) auto-generated; host may regenerate.
+
+Kick / Ban: host can remove disruptive users.
+
+Optional profanity filter toggle for chat & pitch text submission.
+
+GDPR-ready: delete game data after 24 h unless user opts to save replays.
+
+11 · Extensibility Hooks
+Custom Decks: allow host to upload or select alternative card sets (JSON schema identical).
+
+Audience Mode: observers can up-vote and influence bonus funding but not baseline.
+
+Analytics: emit anonymous events (ROUND_LENGTH, AVERAGE_VOTES) for improving pacing.
+
+Deliverables for Your Agent
+Backend: WebSocket gateway + REST auth, models in §2.
+
+Frontend: React + Tailwind, routes §8, real-time hooks for §5 events.
+
+DevOps: Docker Compose (Postgres + API), optional Redis for pub/sub.

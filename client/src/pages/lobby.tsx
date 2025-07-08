@@ -157,7 +157,7 @@ export default function Lobby() {
               <GamepadIcon className="w-8 h-8 text-primary" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Game Lobby</h1>
+              <h1 className="text-3xl font-bold text-gray-900">Odie Rules</h1>
               <div className="flex items-center justify-center space-x-2 mt-2">
                 <span className="text-lg font-mono bg-white px-3 py-1 rounded-lg shadow">
                   #{roomPin}

@@ -102,6 +102,13 @@ export default function Game() {
     }
   }, [lastMessage, setLocation, roomPin, toast]);
 
+  useEffect(() => {
+    document.title = `Game ${roomPin} - Odie Rules`;
+    return () => {
+      document.title = "Odie Rules";
+    };
+  }, [roomPin]);
+
   const handlePlayVentureCard = (cardId: string, targetPlayerId?: string) => {
     sendMessage({
       type: "PLAY_VENTURE_CARD",
@@ -152,7 +159,7 @@ export default function Game() {
         maxRounds={gameState.room.settings.maxRounds}
         isConnected={isConnected}
       />
-      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-1">
@@ -161,7 +168,7 @@ export default function Game() {
               currentPlayerId={playerId}
             />
           </div>
-          
+
           <div className="lg:col-span-3">
             <MainGameArea
               currentPhase={currentPhase}

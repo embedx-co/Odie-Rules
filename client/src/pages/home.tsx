@@ -43,12 +43,12 @@ export default function Home() {
       });
 
       const data = await response.json();
-      
+
       // Store player data in localStorage
       localStorage.setItem("playerId", data.player.id);
       localStorage.setItem("playerName", data.player.name);
       localStorage.setItem("isHost", "true");
-      
+
       setLocation(`/lobby/${data.room.pin}`);
     } catch (error) {
       toast({
@@ -87,12 +87,12 @@ export default function Home() {
       });
 
       const data = await response.json();
-      
+
       // Store player data in localStorage
       localStorage.setItem("playerId", data.player.id);
       localStorage.setItem("playerName", data.player.name);
       localStorage.setItem("isHost", "false");
-      
+
       setLocation(`/lobby/${roomPin.trim()}`);
     } catch (error) {
       toast({
@@ -112,7 +112,9 @@ export default function Home() {
         <div className="text-center mb-12">
           <div className="flex items-center justify-center mb-6">
             <Rocket className="w-12 h-12 text-primary mr-4" />
-            <h1 className="text-5xl font-bold text-gray-900">Launch Pitch</h1>
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">
+              Odie Rules
+            </h1>
           </div>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
             The ultimate startup pitch competition game. Create solutions, pitch ideas, and compete for funding in this real-time multiplayer experience.

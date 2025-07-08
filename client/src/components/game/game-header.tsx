@@ -17,7 +17,7 @@ export default function GameHeader({ roomPin, currentRound, maxRounds, isConnect
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
               <Rocket className="text-primary text-2xl" />
-              <h1 className="text-2xl font-bold text-gray-900">Launch Pitch</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Odie Rules</h1>
             </div>
             <div className="hidden md:flex items-center space-x-2 text-sm text-gray-600">
               <Badge variant="outline">Room: #{roomPin}</Badge>

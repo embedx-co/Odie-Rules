@@ -1,8 +1,8 @@
-# Launch Pitch Game - Replit Configuration
+# Odie Rules - Replit Configuration
 
 ## Overview
 
-Launch Pitch is a real-time multiplayer pitch competition game built with React frontend and Express backend. Players receive prompts (problems/products) and compete to deliver the best pitch within time limits, with strategic Venture cards adding gameplay twists. The game uses WebSocket for real-time communication and PostgreSQL for data persistence.
+Odie Rules is a real-time multiplayer pitch competition game built with React frontend and Express backend. Players receive prompts (problems/products) and compete to deliver the best pitch within time limits, with strategic Venture cards adding gameplay twists. The game uses WebSocket for real-time communication and PostgreSQL for data persistence.
 
 ## System Architecture
 

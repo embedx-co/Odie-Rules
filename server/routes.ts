@@ -4,7 +4,7 @@ import { WebSocketServer } from "ws";
 import { storage } from "./storage";
 import { gameSettingsSchema } from "@shared/schema";
 import { nanoid } from "nanoid";
-import { setupWebSocket } from "./websocket";
+import { setupWebSocket, broadcastToRoom } from "./websocket";
 
 function generateRoomPin(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -200,6 +200,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error getting room:", error);
       res.status(500).json({ error: "Failed to get room details" });
+    }
+  });
+
+  // Update room settings
+  app.patch("/api/rooms/:pin/settings", async (req, res) => {
+    try {
+      const { pin } = req.params;
+      const { hostId, settings } = req.body;
+
+      const room = await storage.getGameRoomByPin(pin);
+      if (!room) {
+        return res.status(404).json({ error: "Room not found" });
+      }
+
+      if (room.hostId !== hostId) {
+        return res.status(403).json({ error: "Only the host can update settings" });
+      }
+
+      if (room.state !== "lobby") {
+        return res.status(400).json({ error: "Cannot update settings after game start" });
+      }
+
+      const validated = gameSettingsSchema.parse({ ...room.settings, ...(settings || {}) });
+      const updated = await storage.updateGameRoom(room.id, { settings: validated });
+
+      broadcastToRoom(room.id, { type: "SETTINGS_UPDATED", settings: updated.settings });
+
+      res.json({ settings: updated.settings });
+    } catch (error) {
+      console.error("Error updating settings:", error);
+      res.status(500).json({ error: "Failed to update settings" });
     }
   });
 

@@ -1,6 +1,7 @@
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { GameLogic } from "./game-logic";
+import { gameSettingsSchema } from "@shared/schema";
 
 interface GameClient {
   ws: WebSocket;
@@ -59,6 +60,9 @@ async function handleMessage(clientId: string, message: any) {
       break;
     case "SELECT_INVESTMENT":
       await handleSelectInvestment(clientId, message);
+      break;
+    case "UPDATE_SETTINGS":
+      await handleUpdateSettings(clientId, message);
       break;
     case "START_GAME":
       await handleStartGame(clientId, message);
@@ -204,6 +208,32 @@ async function handleCastVote(clientId: string, message: any) {
       type: "ERROR", 
       message: error instanceof Error ? error.message : "Failed to cast vote" 
     }));
+  }
+}
+
+async function handleUpdateSettings(clientId: string, message: any) {
+  const client = clients.get(clientId);
+  if (!client || !client.roomId || !client.playerId) return;
+
+  const { settings } = message;
+
+  try {
+    const room = await storage.getGameRoom(client.roomId);
+    if (!room) throw new Error("Room not found");
+    if (room.hostId !== client.playerId) throw new Error("Only host can update settings");
+    if (room.state !== "lobby") throw new Error("Cannot update settings after start");
+
+    const validated = gameSettingsSchema.parse({ ...room.settings, ...(settings || {}) });
+    await storage.updateGameRoom(client.roomId, { settings: validated });
+
+    broadcastToRoom(client.roomId, { type: "SETTINGS_UPDATED", settings: validated });
+  } catch (error) {
+    client.ws.send(
+      JSON.stringify({
+        type: "ERROR",
+        message: error instanceof Error ? error.message : "Failed to update settings",
+      })
+    );
   }
 }
 

@@ -4,9 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Copy, Settings, Users, Clock, DollarSign, GamepadIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -21,6 +20,8 @@ export default function Lobby() {
   const [playerId, setPlayerId] = useState("");
   const [isHost, setIsHost] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
+  const [localSettings, setLocalSettings] = useState<any | null>(null);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
 
   // Get room PIN from URL
   useEffect(() => {
@@ -60,6 +61,12 @@ export default function Lobby() {
     refetchInterval: 2000, // Refetch every 2 seconds for live updates
   });
 
+  useEffect(() => {
+    if (roomData) {
+      setLocalSettings(roomData.room.settings);
+    }
+  }, [roomData]);
+
   // WebSocket connection
   const { isConnected, lastMessage, sendMessage } = useWebSocket(roomPin ? `/ws` : null);
 
@@ -85,6 +92,11 @@ export default function Lobby() {
         case "PLAYER_JOINED":
           // Room data will be updated by the query refetch
           break;
+        case "SETTINGS_UPDATED":
+          if (lastMessage.settings) {
+            setLocalSettings(lastMessage.settings);
+          }
+          break;
         case "ERROR":
           toast({
             title: "Error",
@@ -102,6 +114,35 @@ export default function Lobby() {
       title: "Copied!",
       description: "Room PIN copied to clipboard",
     });
+  };
+
+  const handleSaveSettings = async () => {
+    if (!localSettings) return;
+    setIsSavingSettings(true);
+    try {
+      if (isConnected) {
+        sendMessage({
+          type: "UPDATE_SETTINGS",
+          playerId,
+          roomPin,
+          settings: localSettings,
+        });
+      } else {
+        await apiRequest("PATCH", `/api/rooms/${roomPin}/settings`, {
+          hostId: playerId,
+          settings: localSettings,
+        });
+      }
+      toast({ title: "Settings updated" });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update settings",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingSettings(false);
+    }
   };
 
   const handleStartGame = async () => {
@@ -285,37 +326,120 @@ export default function Lobby() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Users className="w-4 h-4 text-gray-500" />
-                    <span className="text-sm font-medium">Max Players</span>
+                {isHost && localSettings ? (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Max Players</Label>
+                      <Input
+                        type="number"
+                        min={3}
+                        max={12}
+                        value={localSettings.maxPlayers}
+                        onChange={(e) =>
+                          setLocalSettings({
+                            ...localSettings,
+                            maxPlayers: Number(e.target.value),
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Pitch Time (sec)</Label>
+                      <Input
+                        type="number"
+                        min={30}
+                        max={180}
+                        value={localSettings.pitchTimerSec}
+                        onChange={(e) =>
+                          setLocalSettings({
+                            ...localSettings,
+                            pitchTimerSec: Number(e.target.value),
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Funding Target (B)</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={localSettings.fundingTargetBillion}
+                        onChange={(e) =>
+                          setLocalSettings({
+                            ...localSettings,
+                            fundingTargetBillion: Number(e.target.value),
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Venture Cards per Player</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={5}
+                        value={localSettings.ventureCardsPerPlayer}
+                        onChange={(e) =>
+                          setLocalSettings({
+                            ...localSettings,
+                            ventureCardsPerPlayer: Number(e.target.value),
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Label className="mr-2">Allow Observers</Label>
+                      <Switch
+                        checked={localSettings.allowAudienceObservers}
+                        onCheckedChange={(val) =>
+                          setLocalSettings({
+                            ...localSettings,
+                            allowAudienceObservers: val,
+                          })
+                        }
+                      />
+                    </div>
+                    <Button
+                      onClick={handleSaveSettings}
+                      disabled={isSavingSettings}
+                      className="w-full"
+                      size="sm"
+                    >
+                      {isSavingSettings ? "Saving..." : "Save Settings"}
+                    </Button>
                   </div>
-                  <Badge variant="outline">{settings.maxPlayers}</Badge>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Clock className="w-4 h-4 text-gray-500" />
-                    <span className="text-sm font-medium">Pitch Time</span>
-                  </div>
-                  <Badge variant="outline">{settings.pitchTimerSec}s</Badge>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <DollarSign className="w-4 h-4 text-gray-500" />
-                    <span className="text-sm font-medium">Funding Target</span>
-                  </div>
-                  <Badge variant="outline">${settings.fundingTargetBillion}B</Badge>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <GamepadIcon className="w-4 h-4 text-gray-500" />
-                    <span className="text-sm font-medium">Venture Cards</span>
-                  </div>
-                  <Badge variant="outline">{settings.ventureCardsPerPlayer} per player</Badge>
-                </div>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <Users className="w-4 h-4 text-gray-500" />
+                        <span className="text-sm font-medium">Max Players</span>
+                      </div>
+                      <Badge variant="outline">{settings.maxPlayers}</Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <Clock className="w-4 h-4 text-gray-500" />
+                        <span className="text-sm font-medium">Pitch Time</span>
+                      </div>
+                      <Badge variant="outline">{settings.pitchTimerSec}s</Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <DollarSign className="w-4 h-4 text-gray-500" />
+                        <span className="text-sm font-medium">Funding Target</span>
+                      </div>
+                      <Badge variant="outline">${settings.fundingTargetBillion}B</Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <GamepadIcon className="w-4 h-4 text-gray-500" />
+                        <span className="text-sm font-medium">Venture Cards</span>
+                      </div>
+                      <Badge variant="outline">{settings.ventureCardsPerPlayer} per player</Badge>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
 

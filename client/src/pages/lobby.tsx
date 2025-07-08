@@ -34,11 +34,11 @@ export default function Lobby() {
     const storedPlayerId = localStorage.getItem("playerId");
     const storedIsHost = localStorage.getItem("isHost") === "true";
     const storedRoomPin = localStorage.getItem("roomPin");
-    
+
     if (storedPlayerId) {
       setPlayerId(storedPlayerId);
       setIsHost(storedIsHost);
-      
+
       // If the stored room PIN doesn't match current PIN, clear localStorage
       if (storedRoomPin !== pin) {
         localStorage.removeItem("playerId");
@@ -63,16 +63,17 @@ export default function Lobby() {
   // WebSocket connection
   const { isConnected, lastMessage, sendMessage } = useWebSocket(roomPin ? `/ws` : null);
 
-  // Connect to WebSocket when room data is available
+  // Join room via WebSocket when connected
   useEffect(() => {
-    if (roomData && playerId && isConnected) {
+    if (isConnected && playerId && roomPin) {
+      console.log("Joining room via WebSocket", { playerId, roomPin });
       sendMessage({
         type: "JOIN_ROOM",
         playerId,
         roomPin,
       });
     }
-  }, [roomData, playerId, isConnected, sendMessage, roomPin]);
+  }, [isConnected, playerId, roomPin, sendMessage]);
 
   // Handle WebSocket messages
   useEffect(() => {
@@ -105,7 +106,7 @@ export default function Lobby() {
 
   const handleStartGame = async () => {
     console.log("Start game clicked", { isHost, canStart, players: players.length, isConnected, playerId, roomPin });
-    
+
     if (!isHost) {
       console.log("Not host, returning");
       return;
@@ -291,7 +292,7 @@ export default function Lobby() {
                   </div>
                   <Badge variant="outline">{settings.maxPlayers}</Badge>
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <Clock className="w-4 h-4 text-gray-500" />
@@ -299,7 +300,7 @@ export default function Lobby() {
                   </div>
                   <Badge variant="outline">{settings.pitchTimerSec}s</Badge>
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <DollarSign className="w-4 h-4 text-gray-500" />
@@ -307,7 +308,7 @@ export default function Lobby() {
                   </div>
                   <Badge variant="outline">${settings.fundingTargetBillion}B</Badge>
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <GamepadIcon className="w-4 h-4 text-gray-500" />

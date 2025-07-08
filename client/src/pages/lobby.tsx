@@ -91,10 +91,21 @@ export default function Lobby() {
   };
 
   const handleStartGame = async () => {
-    if (!isHost) return;
+    console.log("Start game clicked", { isHost, canStart, players: players.length, isConnected, playerId, roomPin });
+    
+    if (!isHost) {
+      console.log("Not host, returning");
+      return;
+    }
+
+    if (!canStart) {
+      console.log("Cannot start game", { playersCount: players.length, roomState: roomData.room.state });
+      return;
+    }
 
     setIsStarting(true);
     try {
+      console.log("Sending start game message");
       // Send WebSocket message to start game
       if (isConnected) {
         sendMessage({
@@ -102,13 +113,17 @@ export default function Lobby() {
           playerId,
           roomPin,
         });
+        console.log("WebSocket message sent");
       } else {
+        console.log("WebSocket not connected, using API fallback");
         // Fallback to API call if WebSocket not connected
         await apiRequest("POST", `/api/rooms/${roomPin}/start`, {
           hostId: playerId,
         });
+        console.log("API call completed");
       }
     } catch (error) {
+      console.error("Start game error:", error);
       toast({
         title: "Error",
         description: "Failed to start game. Please try again.",
@@ -153,7 +168,7 @@ export default function Lobby() {
 
   const settings = roomData.room.settings;
   const players = roomData.players || [];
-  const canStart = players.length >= 3 && isHost;
+  const canStart = players.length >= 3 && isHost && roomData.room.state === "lobby";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50">
@@ -294,14 +309,26 @@ export default function Lobby() {
             <Card className="shadow-lg">
               <CardContent className="pt-6">
                 {isHost ? (
-                  <Button
-                    onClick={handleStartGame}
-                    disabled={!canStart || isStarting}
-                    className="w-full"
-                    size="lg"
-                  >
-                    {isStarting ? "Starting..." : "Start Game"}
-                  </Button>
+                  <div className="space-y-2">
+                    <Button
+                      onClick={handleStartGame}
+                      disabled={!canStart || isStarting}
+                      className="w-full"
+                      size="lg"
+                    >
+                      {isStarting ? "Starting..." : "Start Game"}
+                    </Button>
+                    {!canStart && (
+                      <p className="text-sm text-gray-500 text-center">
+                        {players.length < 3 
+                          ? `Need ${3 - players.length} more player${3 - players.length === 1 ? '' : 's'}`
+                          : roomData.room.state !== "lobby" 
+                            ? "Game already started" 
+                            : "Cannot start game"
+                        }
+                      </p>
+                    )}
+                  </div>
                 ) : (
                   <div className="text-center">
                     <p className="text-gray-600 mb-4">

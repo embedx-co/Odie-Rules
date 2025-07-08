@@ -1,0 +1,233 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(0, 0%, 100%);
+  --foreground: hsl(20, 14.3%, 4.1%);
+  --muted: hsl(60, 4.8%, 95.9%);
+  --muted-foreground: hsl(25, 5.3%, 44.7%);
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(20, 14.3%, 4.1%);
+  --card: hsl(0, 0%, 100%);
+  --card-foreground: hsl(20, 14.3%, 4.1%);
+  --border: hsl(20, 5.9%, 90%);
+  --input: hsl(20, 5.9%, 90%);
+  --primary: hsl(247, 85%, 67%);
+  --primary-foreground: hsl(211, 100%, 99%);
+  --secondary: hsl(158, 68%, 45%);
+  --secondary-foreground: hsl(24, 9.8%, 10%);
+  --accent: hsl(42, 96%, 59%);
+  --accent-foreground: hsl(24, 9.8%, 10%);
+  --destructive: hsl(0, 84.2%, 60.2%);
+  --destructive-foreground: hsl(60, 9.1%, 97.8%);
+  --ring: hsl(20, 14.3%, 4.1%);
+  --radius: 0.5rem;
+}
+
+.dark {
+  --background: hsl(240, 10%, 3.9%);
+  --foreground: hsl(0, 0%, 98%);
+  --muted: hsl(240, 3.7%, 15.9%);
+  --muted-foreground: hsl(240, 5%, 64.9%);
+  --popover: hsl(240, 10%, 3.9%);
+  --popover-foreground: hsl(0, 0%, 98%);
+  --card: hsl(240, 10%, 3.9%);
+  --card-foreground: hsl(0, 0%, 98%);
+  --border: hsl(240, 3.7%, 15.9%);
+  --input: hsl(240, 3.7%, 15.9%);
+  --primary: hsl(247, 85%, 67%);
+  --primary-foreground: hsl(211, 100%, 99%);
+  --secondary: hsl(158, 68%, 45%);
+  --secondary-foreground: hsl(0, 0%, 98%);
+  --accent: hsl(42, 96%, 59%);
+  --accent-foreground: hsl(0, 0%, 98%);
+  --destructive: hsl(0, 62.8%, 30.6%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+  --ring: hsl(240, 4.9%, 83.9%);
+  --radius: 0.5rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
+  }
+}
+
+/* Custom game-specific styles */
+.timer-ring {
+  animation: spin 120s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.card-flip {
+  transition: transform 0.6s;
+  transform-style: preserve-3d;
+}
+
+.card-flip:hover {
+  transform: rotateY(180deg);
+}
+
+.funding-counter {
+  animation: countUp 2s ease-out;
+}
+
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.pulse-dot {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.card-shadow {
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+/* Venture card gradients */
+.venture-card-purple {
+  background: linear-gradient(135deg, hsl(272, 51%, 54%) 0%, hsl(316, 57%, 47%) 100%);
+}
+
+.venture-card-orange {
+  background: linear-gradient(135deg, hsl(25, 95%, 53%) 0%, hsl(0, 84%, 60%) 100%);
+}
+
+.venture-card-green {
+  background: linear-gradient(135deg, hsl(158, 68%, 45%) 0%, hsl(173, 58%, 39%) 100%);
+}
+
+.venture-card-blue {
+  background: linear-gradient(135deg, hsl(213, 94%, 68%) 0%, hsl(247, 85%, 67%) 100%);
+}
+
+/* Phase indicators */
+.phase-planning {
+  background: linear-gradient(135deg, hsl(42, 96%, 59%) 0%, hsl(32, 95%, 44%) 100%);
+}
+
+.phase-pitching {
+  background: linear-gradient(135deg, hsl(0, 84%, 60%) 0%, hsl(349, 89%, 60%) 100%);
+}
+
+.phase-voting {
+  background: linear-gradient(135deg, hsl(158, 68%, 45%) 0%, hsl(142, 71%, 45%) 100%);
+}
+
+.phase-results {
+  background: linear-gradient(135deg, hsl(213, 94%, 68%) 0%, hsl(221, 83%, 53%) 100%);
+}
+
+/* Timer animations */
+.timer-progress {
+  transition: width 1s linear;
+}
+
+/* Player status indicators */
+.player-active {
+  animation: glow 2s infinite alternate;
+}
+
+@keyframes glow {
+  from { box-shadow: 0 0 5px hsl(42, 96%, 59%), 0 0 10px hsl(42, 96%, 59%), 0 0 15px hsl(42, 96%, 59%); }
+  to { box-shadow: 0 0 10px hsl(42, 96%, 59%), 0 0 20px hsl(42, 96%, 59%), 0 0 30px hsl(42, 96%, 59%); }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .venture-card {
+    min-width: 200px;
+  }
+}
+
+/* Startup-themed styling */
+.startup-gradient {
+  background: linear-gradient(135deg, hsl(247, 85%, 67%) 0%, hsl(272, 51%, 54%) 50%, hsl(316, 57%, 47%) 100%);
+}
+
+.success-gradient {
+  background: linear-gradient(135deg, hsl(158, 68%, 45%) 0%, hsl(142, 71%, 45%) 100%);
+}
+
+.warning-gradient {
+  background: linear-gradient(135deg, hsl(42, 96%, 59%) 0%, hsl(32, 95%, 44%) 100%);
+}
+
+.danger-gradient {
+  background: linear-gradient(135deg, hsl(0, 84%, 60%) 0%, hsl(349, 89%, 60%) 100%);
+}
+
+/* Loading animations */
+.loading-pulse {
+  animation: loading-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes loading-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Card hover effects */
+.hover-lift {
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Text styling for better readability */
+.text-startup {
+  color: hsl(247, 85%, 67%);
+}
+
+.text-success {
+  color: hsl(158, 68%, 45%);
+}
+
+.text-warning {
+  color: hsl(42, 96%, 59%);
+}
+
+.text-danger {
+  color: hsl(0, 84%, 60%);
+}
+
+/* Room PIN styling */
+.room-pin {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+}
+
+/* Game phase transitions */
+.phase-transition {
+  transition: all 0.3s ease-in-out;
+}
+
+/* Victory celebration */
+.celebrate {
+  animation: celebrate 0.6s ease-in-out;
+}
+
+@keyframes celebrate {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
